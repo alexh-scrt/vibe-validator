@@ -1,0 +1,91 @@
+<!--
+  error.html — Partial template injected via HTMX into #result-area on error.
+  Receives an `error_message` context variable (str) and an optional
+  `error_code` context variable (int | None).
+-->
+
+<div class="animate-fade-in" role="alert" aria-live="assertive" aria-atomic="true">
+  <div class="rounded-2xl border border-red-800 bg-red-950/40 p-6 shadow-lg">
+
+    <!-- Header row -->
+    <div class="flex items-start gap-4">
+      <!-- Icon -->
+      <div class="flex-shrink-0 w-10 h-10 rounded-full bg-red-900/60 border border-red-800 flex items-center justify-center" aria-hidden="true">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+          <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+        </svg>
+      </div>
+
+      <!-- Title + optional code -->
+      <div class="flex-1 min-w-0">
+        <div class="flex items-center gap-3 flex-wrap">
+          <h3 class="text-base font-bold text-red-300">Something went wrong</h3>
+          {% if error_code %}
+          <span class="text-xs font-mono font-semibold px-2 py-0.5 rounded-full bg-red-900/60 border border-red-800 text-red-400">
+            Error {{ error_code }}
+          </span>
+          {% endif %}
+        </div>
+
+        <!-- Error message -->
+        <p class="mt-2 text-sm text-red-200 leading-relaxed">
+          {{ error_message }}
+        </p>
+      </div>
+    </div>
+
+    <!-- Divider -->
+    <div class="mt-5 pt-5 border-t border-red-900/60">
+      <!-- Contextual help tips -->
+      <p class="text-xs font-semibold text-red-400 uppercase tracking-wider mb-3">What you can try</p>
+      <ul class="space-y-2">
+        <li class="flex items-start gap-2 text-xs text-red-300/80">
+          <span class="flex-shrink-0 mt-0.5 text-red-500">&#8227;</span>
+          Check that your idea description is at least 20 characters and no longer than 2&nbsp;000 characters.
+        </li>
+        <li class="flex items-start gap-2 text-xs text-red-300/80">
+          <span class="flex-shrink-0 mt-0.5 text-red-500">&#8227;</span>
+          Make sure the server has a valid <code class="font-mono text-red-300 bg-red-900/40 px-1 rounded">OPENAI_API_KEY</code> set in its environment.
+        </li>
+        <li class="flex items-start gap-2 text-xs text-red-300/80">
+          <span class="flex-shrink-0 mt-0.5 text-red-500">&#8227;</span>
+          If the problem persists, the OpenAI API may be experiencing an outage &mdash; check
+          <a href="https://status.openai.com" target="_blank" rel="noopener noreferrer" class="underline hover:text-red-200 transition-colors">status.openai.com</a>.
+        </li>
+      </ul>
+    </div>
+
+    <!-- Retry button -->
+    <div class="mt-5">
+      <button
+        type="button"
+        onclick="dismissError()"
+        class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold bg-red-900/50 hover:bg-red-900/80 border border-red-800 text-red-300 hover:text-white transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-red-500"
+        aria-label="Dismiss error and try again"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+          <path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clip-rule="evenodd" />
+        </svg>
+        Try Again
+      </button>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  /**
+   * Dismiss the error partial and return focus to the idea textarea so
+   * the user can quickly correct and resubmit.
+   */
+  function dismissError() {
+    var resultArea = document.getElementById('result-area');
+    if (resultArea) resultArea.innerHTML = '';
+
+    var textarea = document.getElementById('idea');
+    if (textarea) textarea.focus();
+
+    var btn = document.getElementById('submit-btn');
+    if (btn) btn.disabled = false;
+  }
+</script>

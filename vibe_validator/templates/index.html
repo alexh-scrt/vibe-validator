@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Vibe Validator — AI-powered viability reports for your side-hustle app idea. Get instant market analysis, competitor insights, monetisation models, and a ready-to-paste starter prompt." />
+  <title>Vibe Validator — Validate Your App Idea in Seconds</title>
+
+  <!-- TailwindCSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- HTMX CDN -->
+  <script src="https://unpkg.com/htmx.org@1.9.12" integrity="sha384-ujb1lZYygJmzgSwoxRggbCHcjc0rB2uFgteQOV15340jWI7606tCasbXjB656fL" crossorigin="anonymous"></script>
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50:  '#f0fdf4',
+              100: '#dcfce7',
+              200: '#bbf7d0',
+              300: '#86efac',
+              400: '#4ade80',
+              500: '#22c55e',
+              600: '#16a34a',
+              700: '#15803d',
+              800: '#166534',
+              900: '#14532d',
+            }
+          },
+          fontFamily: {
+            sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+            mono: ['JetBrains Mono', 'ui-monospace', 'monospace'],
+          },
+          animation: {
+            'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+            'fade-in': 'fadeIn 0.4s ease-out forwards',
+          },
+          keyframes: {
+            fadeIn: {
+              '0%':   { opacity: '0', transform: 'translateY(12px)' },
+              '100%': { opacity: '1', transform: 'translateY(0)' },
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Google Fonts: Inter + JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+
+  <style>
+    /* Gradient background pattern */
+    .hero-bg {
+      background-color: #0f172a;
+      background-image:
+        radial-gradient(ellipse at 20% 50%, rgba(34, 197, 94, 0.08) 0%, transparent 60%),
+        radial-gradient(ellipse at 80% 10%, rgba(59, 130, 246, 0.06) 0%, transparent 50%);
+    }
+
+    /* Smooth transition for the result area */
+    #result-area {
+      transition: min-height 0.3s ease;
+    }
+
+    /* Loading spinner */
+    .spinner {
+      width: 20px;
+      height: 20px;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-top-color: #ffffff;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      display: inline-block;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* HTMX request indicator */
+    .htmx-request .btn-label { display: none; }
+    .htmx-request .btn-loading { display: flex; }
+    .btn-loading { display: none; align-items: center; gap: 8px; }
+
+    /* Character counter colour states */
+    .char-ok    { color: #6b7280; }
+    .char-warn  { color: #f59e0b; }
+    .char-error { color: #ef4444; }
+  </style>
+</head>
+
+<body class="hero-bg min-h-screen font-sans text-slate-100 antialiased">
+
+  <!-- ===== NAV ===== -->
+  <nav class="border-b border-slate-800 bg-slate-900/60 backdrop-blur-sm sticky top-0 z-50">
+    <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between">
+      <a href="/" class="flex items-center gap-2 font-bold text-lg tracking-tight text-white">
+        <span class="text-brand-400">&#9889;</span> Vibe Validator
+      </a>
+      <span class="hidden sm:inline-block text-xs font-medium px-2.5 py-1 rounded-full bg-brand-900/60 text-brand-400 border border-brand-800">
+        Powered by GPT-4o
+      </span>
+    </div>
+  </nav>
+
+  <!-- ===== HERO ===== -->
+  <section class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 pt-16 pb-10 text-center">
+    <div class="inline-flex items-center gap-2 mb-6 text-xs font-semibold tracking-widest uppercase text-brand-400 bg-brand-900/40 border border-brand-800 rounded-full px-4 py-1.5">
+      <span class="inline-block w-2 h-2 rounded-full bg-brand-400 animate-pulse-slow"></span>
+      AI Viability Analysis
+    </div>
+
+    <h1 class="text-4xl sm:text-5xl font-extrabold leading-tight tracking-tight text-white mb-4">
+      Turn your fuzzy idea into
+      <span class="text-brand-400">actionable intelligence</span>
+    </h1>
+
+    <p class="text-slate-400 text-lg sm:text-xl leading-relaxed max-w-2xl mx-auto mb-2">
+      Paste your side-hustle app idea below. Get an instant structured report:
+      market size, competitors, monetisation models, and a
+      ready-to-paste prompt for Lovable, Claude, or Base44.
+    </p>
+
+    <p class="text-slate-600 text-sm">No signup required &mdash; results in under 10 seconds.</p>
+  </section>
+
+  <!-- ===== FORM SECTION ===== -->
+  <section class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 pb-10">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 sm:p-8 shadow-2xl shadow-black/40">
+
+      <form
+        id="idea-form"
+        hx-post="/validate"
+        hx-target="#result-area"
+        hx-swap="innerHTML"
+        hx-indicator="#submit-btn"
+        novalidate
+      >
+        <!-- Textarea label -->
+        <label for="idea" class="block text-sm font-semibold text-slate-300 mb-2">
+          Describe your app idea
+          <span class="text-brand-500">*</span>
+        </label>
+
+        <!-- Textarea -->
+        <textarea
+          id="idea"
+          name="idea"
+          rows="6"
+          minlength="20"
+          maxlength="2000"
+          required
+          placeholder="e.g. &#39;A mobile app that lets dog owners book on-demand vet video consultations within minutes. Targets busy urban pet owners who can&#39;t easily visit a clinic.&#39;"
+          class="w-full rounded-xl bg-slate-800 border border-slate-700 text-slate-100 placeholder-slate-500 text-sm leading-relaxed p-4 resize-none focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition"
+          oninput="updateCharCount(this)"
+          onkeydown="handleTextareaKeydown(event)"
+        ></textarea>
+
+        <!-- Character counter + hint -->
+        <div class="mt-2 flex items-center justify-between gap-4">
+          <p class="text-xs text-slate-500">Be specific for a better analysis. Minimum 20 characters.</p>
+          <p id="char-count" class="text-xs font-mono char-ok whitespace-nowrap">0 / 2000</p>
+        </div>
+
+        <!-- Submit button -->
+        <div class="mt-6">
+          <button
+            id="submit-btn"
+            type="submit"
+            class="w-full sm:w-auto inline-flex items-center justify-center gap-3 px-8 py-3.5 rounded-xl font-semibold text-sm bg-brand-500 hover:bg-brand-400 text-white shadow-lg shadow-brand-900/40 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-900 focus:ring-brand-500 disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            <span class="btn-label flex items-center gap-2">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                <path fill-rule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clip-rule="evenodd" />
+              </svg>
+              Validate My Idea
+            </span>
+            <span class="btn-loading">
+              <span class="spinner" aria-hidden="true"></span>
+              Analysing&hellip;
+            </span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </section>
+
+  <!-- ===== RESULT AREA ===== -->
+  <section class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 pb-20" id="result-area" aria-live="polite" aria-atomic="true">
+    <!-- Partial templates (report.html / error.html) are injected here by HTMX -->
+  </section>
+
+  <!-- ===== FEATURE PILLS ===== -->
+  <section class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 pb-16">
+    <p class="text-center text-xs text-slate-600 uppercase tracking-widest mb-6 font-semibold">What you get</p>
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div class="flex flex-col items-center gap-2 rounded-xl bg-slate-900/60 border border-slate-800 p-4 text-center">
+        <span class="text-2xl" role="img" aria-label="Market">&#128200;</span>
+        <span class="text-xs text-slate-400 font-medium leading-snug">Market Size Estimate</span>
+      </div>
+      <div class="flex flex-col items-center gap-2 rounded-xl bg-slate-900/60 border border-slate-800 p-4 text-center">
+        <span class="text-2xl" role="img" aria-label="Competitors">&#128269;</span>
+        <span class="text-xs text-slate-400 font-medium leading-snug">Similar Products</span>
+      </div>
+      <div class="flex flex-col items-center gap-2 rounded-xl bg-slate-900/60 border border-slate-800 p-4 text-center">
+        <span class="text-2xl" role="img" aria-label="Monetisation">&#128176;</span>
+        <span class="text-xs text-slate-400 font-medium leading-snug">Monetisation Models</span>
+      </div>
+      <div class="flex flex-col items-center gap-2 rounded-xl bg-slate-900/60 border border-slate-800 p-4 text-center">
+        <span class="text-2xl" role="img" aria-label="Starter prompt">&#128640;</span>
+        <span class="text-xs text-slate-400 font-medium leading-snug">Starter Prompt</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== FOOTER ===== -->
+  <footer class="border-t border-slate-800 py-6 text-center text-xs text-slate-600">
+    <p>Built for the wave of non-technical founders shipping with AI &mdash; no data stored.</p>
+    <p class="mt-1">&#9889; Vibe Validator &copy; 2024</p>
+  </footer>
+
+  <!-- ===== JS HELPERS ===== -->
+  <script>
+    /**
+     * Update the character counter beneath the textarea and apply colour
+     * coding based on remaining length.
+     * @param {HTMLTextAreaElement} textarea
+     */
+    function updateCharCount(textarea) {
+      const max = parseInt(textarea.getAttribute('maxlength') || '2000', 10);
+      const len = textarea.value.length;
+      const counter = document.getElementById('char-count');
+      if (!counter) return;
+
+      counter.textContent = `${len} / ${max}`;
+
+      counter.classList.remove('char-ok', 'char-warn', 'char-error');
+      if (len > max * 0.9) {
+        counter.classList.add('char-error');
+      } else if (len > max * 0.75) {
+        counter.classList.add('char-warn');
+      } else {
+        counter.classList.add('char-ok');
+      }
+    }
+
+    /**
+     * Allow Ctrl+Enter / Cmd+Enter to submit the form from the textarea.
+     * @param {KeyboardEvent} event
+     */
+    function handleTextareaKeydown(event) {
+      if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
+        event.preventDefault();
+        const form = document.getElementById('idea-form');
+        if (form) form.requestSubmit();
+      }
+    }
+
+    /**
+     * After HTMX swaps in new content, scroll the result area into view
+     * smoothly so the user sees it without manual scrolling.
+     */
+    document.body.addEventListener('htmx:afterSwap', function (evt) {
+      if (evt.detail.target && evt.detail.target.id === 'result-area') {
+        setTimeout(function () {
+          evt.detail.target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 80);
+      }
+    });
+
+    /**
+     * Re-enable the submit button after any HTMX request ends (success or
+     * error) so the user can refine and resubmit.
+     */
+    document.body.addEventListener('htmx:afterRequest', function () {
+      const btn = document.getElementById('submit-btn');
+      if (btn) btn.disabled = false;
+    });
+
+    /**
+     * Disable submit button while request is in-flight to prevent double-submit.
+     */
+    document.body.addEventListener('htmx:beforeRequest', function () {
+      const btn = document.getElementById('submit-btn');
+      if (btn) btn.disabled = true;
+    });
+  </script>
+
+</body>
+</html>

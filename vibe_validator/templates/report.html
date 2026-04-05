@@ -1,0 +1,331 @@
+<!--
+  report.html — Partial template injected via HTMX into #result-area.
+  Receives a `report` context variable of type ViabilityReport.
+-->
+
+<!-- Fade-in wrapper -->
+<div class="animate-fade-in space-y-6" role="region" aria-label="Viability Report">
+
+  <!-- ===== HEADER CARD ===== -->
+  <div class="rounded-2xl border {% if report.viability_score.value == 'high' %}border-brand-700 bg-brand-900/20{% elif report.viability_score.value == 'medium' %}border-yellow-700 bg-yellow-900/20{% else %}border-red-800 bg-red-900/20{% endif %} p-6 shadow-lg">
+    <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+      <div class="flex-1 min-w-0">
+        <p class="text-xs font-semibold uppercase tracking-widest mb-1
+          {% if report.viability_score.value == 'high' %}text-brand-400
+          {% elif report.viability_score.value == 'medium' %}text-yellow-400
+          {% else %}text-red-400{% endif %}">
+          Viability Score
+        </p>
+        <h2 class="text-2xl font-extrabold tracking-tight text-white capitalize">
+          {{ report.viability_score.value }}
+        </h2>
+        <p class="mt-3 text-sm text-slate-300 leading-relaxed">{{ report.viability_rationale }}</p>
+      </div>
+
+      <!-- Score badge -->
+      <div class="flex-shrink-0">
+        <span class="inline-flex items-center justify-center w-16 h-16 rounded-full text-3xl font-black border-4
+          {% if report.viability_score.value == 'high' %}border-brand-500 text-brand-400 bg-brand-900/50
+          {% elif report.viability_score.value == 'medium' %}border-yellow-500 text-yellow-400 bg-yellow-900/50
+          {% else %}border-red-500 text-red-400 bg-red-900/50{% endif %}">
+          {% if report.viability_score.value == 'high' %}&uarr;
+          {% elif report.viability_score.value == 'medium' %}&harr;
+          {% else %}&darr;{% endif %}
+        </span>
+      </div>
+    </div>
+
+    <!-- Idea summary -->
+    <div class="mt-4 pt-4 border-t border-slate-700/50">
+      <p class="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">Idea Summary</p>
+      <p class="text-slate-300 text-sm leading-relaxed italic">&ldquo;{{ report.idea_summary }}&rdquo;</p>
+    </div>
+  </div>
+
+  <!-- ===== MARKET SIZE ===== -->
+  <div class="rounded-2xl border border-slate-800 bg-slate-900 p-6 shadow-lg">
+    <h3 class="flex items-center gap-2 text-base font-bold text-white mb-4">
+      <span class="text-lg" role="img" aria-label="Market">&#128200;</span>
+      Market Size
+      <span class="ml-auto text-xs font-medium px-2.5 py-1 rounded-full bg-slate-800 border border-slate-700 text-slate-400 capitalize">
+        {{ report.market_size.tier.value }}
+      </span>
+    </h3>
+
+    <dl class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div class="rounded-xl bg-slate-800/60 border border-slate-700/50 p-4">
+        <dt class="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">TAM</dt>
+        <dd class="text-sm font-semibold text-slate-200">{{ report.market_size.total_addressable_market }}</dd>
+      </div>
+      <div class="rounded-xl bg-slate-800/60 border border-slate-700/50 p-4">
+        <dt class="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">SAM</dt>
+        <dd class="text-sm font-semibold text-slate-200">{{ report.market_size.serviceable_addressable_market }}</dd>
+      </div>
+      <div class="rounded-xl bg-slate-800/60 border border-slate-700/50 p-4">
+        <dt class="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">Growth Rate</dt>
+        <dd class="text-sm font-semibold text-slate-200">{{ report.market_size.growth_rate }}</dd>
+      </div>
+    </dl>
+
+    {% if report.market_size.notes %}
+    <p class="mt-4 text-xs text-slate-500 leading-relaxed">
+      <span class="font-semibold text-slate-400">Notes:</span> {{ report.market_size.notes }}
+    </p>
+    {% endif %}
+  </div>
+
+  <!-- ===== RISKS & OPPORTUNITIES (side by side) ===== -->
+  <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+
+    <!-- Key Risks -->
+    <div class="rounded-2xl border border-red-900/50 bg-slate-900 p-6 shadow-lg">
+      <h3 class="flex items-center gap-2 text-base font-bold text-white mb-4">
+        <span class="text-lg" role="img" aria-label="Risks">&#9888;&#65039;</span>
+        Key Risks
+      </h3>
+      <ul class="space-y-2">
+        {% for risk in report.key_risks %}
+        <li class="flex items-start gap-2 text-sm text-slate-300 leading-relaxed">
+          <span class="mt-0.5 flex-shrink-0 w-1.5 h-1.5 rounded-full bg-red-500 mt-2" aria-hidden="true"></span>
+          {{ risk }}
+        </li>
+        {% endfor %}
+      </ul>
+    </div>
+
+    <!-- Key Opportunities -->
+    <div class="rounded-2xl border border-brand-900/50 bg-slate-900 p-6 shadow-lg">
+      <h3 class="flex items-center gap-2 text-base font-bold text-white mb-4">
+        <span class="text-lg" role="img" aria-label="Opportunities">&#10024;</span>
+        Key Opportunities
+      </h3>
+      <ul class="space-y-2">
+        {% for opp in report.key_opportunities %}
+        <li class="flex items-start gap-2 text-sm text-slate-300 leading-relaxed">
+          <span class="mt-0.5 flex-shrink-0 w-1.5 h-1.5 rounded-full bg-brand-500 mt-2" aria-hidden="true"></span>
+          {{ opp }}
+        </li>
+        {% endfor %}
+      </ul>
+    </div>
+
+  </div>
+
+  <!-- ===== COMPETITORS ===== -->
+  <div class="rounded-2xl border border-slate-800 bg-slate-900 p-6 shadow-lg">
+    <h3 class="flex items-center gap-2 text-base font-bold text-white mb-4">
+      <span class="text-lg" role="img" aria-label="Competitors">&#128269;</span>
+      Similar Products & Competitors
+    </h3>
+
+    <div class="space-y-4">
+      {% for competitor in report.competitors %}
+      <div class="rounded-xl border border-slate-800 bg-slate-800/40 p-4">
+        <div class="flex items-start justify-between gap-3 mb-2">
+          <div class="flex-1 min-w-0">
+            <p class="font-semibold text-white text-sm">{{ competitor.name }}</p>
+            {% if competitor.url %}
+            <a
+              href="{{ competitor.url }}"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="text-xs text-brand-400 hover:text-brand-300 transition-colors truncate block max-w-xs"
+              aria-label="Visit {{ competitor.name }}"
+            >
+              {{ competitor.url }}
+            </a>
+            {% endif %}
+          </div>
+          <span class="flex-shrink-0 text-xs px-2 py-0.5 rounded-full bg-slate-700 text-slate-400 font-medium">Competitor</span>
+        </div>
+        <p class="text-sm text-slate-400 leading-relaxed mb-2">{{ competitor.description }}</p>
+        <div class="flex items-start gap-2 rounded-lg bg-brand-900/20 border border-brand-900/50 p-3">
+          <span class="text-brand-400 text-xs font-bold uppercase tracking-wider flex-shrink-0 mt-0.5">Your Edge</span>
+          <p class="text-xs text-brand-200 leading-relaxed">{{ competitor.differentiator }}</p>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- ===== MONETISATION MODELS ===== -->
+  <div class="rounded-2xl border border-slate-800 bg-slate-900 p-6 shadow-lg">
+    <h3 class="flex items-center gap-2 text-base font-bold text-white mb-4">
+      <span class="text-lg" role="img" aria-label="Monetisation">&#128176;</span>
+      Monetisation Models
+    </h3>
+
+    <div class="space-y-5">
+      {% for model in report.monetization_models %}
+      <div class="rounded-xl border border-slate-800 bg-slate-800/40 p-5">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3">
+          <p class="font-bold text-white text-sm">{{ model.model_name }}</p>
+          <span class="text-xs font-mono font-semibold text-brand-400 bg-brand-900/40 border border-brand-800 rounded-full px-3 py-0.5">
+            ~{{ model.estimated_arpu }}
+          </span>
+        </div>
+        <p class="text-sm text-slate-300 leading-relaxed mb-4">{{ model.description }}</p>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <!-- Pros -->
+          {% if model.pros %}
+          <div>
+            <p class="text-xs font-semibold text-brand-400 uppercase tracking-wider mb-2">&#43; Pros</p>
+            <ul class="space-y-1">
+              {% for pro in model.pros %}
+              <li class="flex items-start gap-1.5 text-xs text-slate-400">
+                <span class="text-brand-500 font-bold flex-shrink-0">+</span>
+                {{ pro }}
+              </li>
+              {% endfor %}
+            </ul>
+          </div>
+          {% endif %}
+
+          <!-- Cons -->
+          {% if model.cons %}
+          <div>
+            <p class="text-xs font-semibold text-red-400 uppercase tracking-wider mb-2">&#8722; Cons</p>
+            <ul class="space-y-1">
+              {% for con in model.cons %}
+              <li class="flex items-start gap-1.5 text-xs text-slate-400">
+                <span class="text-red-500 font-bold flex-shrink-0">&minus;</span>
+                {{ con }}
+              </li>
+              {% endfor %}
+            </ul>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- ===== STARTER PROMPT ===== -->
+  <div class="rounded-2xl border border-slate-700 bg-slate-900 p-6 shadow-lg">
+    <div class="flex items-start justify-between gap-4 mb-4">
+      <h3 class="flex items-center gap-2 text-base font-bold text-white">
+        <span class="text-lg" role="img" aria-label="Starter Prompt">&#128640;</span>
+        Starter Prompt
+      </h3>
+      <button
+        id="copy-btn"
+        type="button"
+        onclick="copyStarterPrompt()"
+        class="flex-shrink-0 inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 hover:text-white transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-brand-500"
+        aria-label="Copy starter prompt to clipboard"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+          <path d="M8 3a1 1 0 011-1h2a1 1 0 110 2H9a1 1 0 01-1-1z" />
+          <path d="M6 3a2 2 0 00-2 2v11a2 2 0 002 2h8a2 2 0 002-2V5a2 2 0 00-2-2 3 3 0 01-3 3H9a3 3 0 01-3-3z" />
+        </svg>
+        <span id="copy-btn-label">Copy</span>
+      </button>
+    </div>
+
+    <p class="text-xs text-slate-500 mb-3">Paste this directly into Lovable, Claude, Base44, or any AI builder to start shipping immediately.</p>
+
+    <pre
+      id="starter-prompt-text"
+      class="whitespace-pre-wrap break-words text-sm font-mono text-slate-300 bg-slate-800 border border-slate-700 rounded-xl p-4 leading-relaxed overflow-x-auto"
+      aria-label="Starter prompt text"
+    >{{ report.starter_prompt }}</pre>
+  </div>
+
+  <!-- ===== TRY AGAIN BUTTON ===== -->
+  <div class="flex justify-center pb-4">
+    <button
+      type="button"
+      onclick="resetForm()"
+      class="inline-flex items-center gap-2 px-6 py-3 rounded-xl border border-slate-700 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-sm font-semibold transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-slate-500"
+    >
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+        <path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clip-rule="evenodd" />
+      </svg>
+      Try Another Idea
+    </button>
+  </div>
+
+</div>
+
+<!-- Inline JS for this partial -->
+<script>
+  /**
+   * Copy the starter prompt text to the user's clipboard and give
+   * visual feedback on the copy button.
+   */
+  function copyStarterPrompt() {
+    var promptEl = document.getElementById('starter-prompt-text');
+    var btnLabel = document.getElementById('copy-btn-label');
+    var btn = document.getElementById('copy-btn');
+    if (!promptEl || !btnLabel || !btn) return;
+
+    var text = promptEl.textContent || promptEl.innerText || '';
+
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(text).then(function () {
+        _showCopied(btnLabel, btn);
+      }).catch(function () {
+        _fallbackCopy(text, btnLabel, btn);
+      });
+    } else {
+      _fallbackCopy(text, btnLabel, btn);
+    }
+  }
+
+  function _showCopied(btnLabel, btn) {
+    btnLabel.textContent = 'Copied!';
+    btn.classList.add('text-brand-400', 'border-brand-700');
+    btn.classList.remove('text-slate-300');
+    setTimeout(function () {
+      btnLabel.textContent = 'Copy';
+      btn.classList.remove('text-brand-400', 'border-brand-700');
+      btn.classList.add('text-slate-300');
+    }, 2000);
+  }
+
+  function _fallbackCopy(text, btnLabel, btn) {
+    var textarea = document.createElement('textarea');
+    textarea.value = text;
+    textarea.style.position = 'fixed';
+    textarea.style.left = '-9999px';
+    textarea.style.top = '-9999px';
+    document.body.appendChild(textarea);
+    textarea.focus();
+    textarea.select();
+    try {
+      document.execCommand('copy');
+      _showCopied(btnLabel, btn);
+    } catch (err) {
+      btnLabel.textContent = 'Failed';
+      setTimeout(function () { btnLabel.textContent = 'Copy'; }, 2000);
+    } finally {
+      document.body.removeChild(textarea);
+    }
+  }
+
+  /**
+   * Scroll back to the form and clear the result area so the user
+   * can start a fresh analysis.
+   */
+  function resetForm() {
+    var resultArea = document.getElementById('result-area');
+    if (resultArea) resultArea.innerHTML = '';
+
+    var textarea = document.getElementById('idea');
+    if (textarea) {
+      textarea.value = '';
+      textarea.focus();
+      // Reset character counter
+      var counter = document.getElementById('char-count');
+      if (counter) {
+        counter.textContent = '0 / 2000';
+        counter.className = 'text-xs font-mono char-ok';
+      }
+    }
+
+    var form = document.getElementById('idea-form');
+    if (form) form.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+</script>
