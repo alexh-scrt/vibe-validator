@@ -21,9 +21,10 @@ import json
 import logging
 import os
 import re
+import time
 from typing import Any
 
-from openai import APIConnectionError, APIStatusError, AuthenticationError, OpenAI
+from openai import APIConnectionError, APIStatusError, APITimeoutError, AuthenticationError, OpenAI
 from pydantic import ValidationError
 
 from vibe_validator.models import IdeaRequest, ViabilityReport
@@ -109,20 +110,26 @@ def _extract_json(raw: str) -> str:
     ResponseParseError
         If no JSON object boundaries can be found in the response.
     """
-    # Strip markdown fences if present
+    if not raw or not raw.strip():
+        raise ResponseParseError(
+            "Cannot extract JSON from an empty or whitespace-only string."
+        )
+
+    # Strip markdown fences if present: ```json ... ``` or ``` ... ```
     stripped = raw.strip()
-    # Remove ```json ... ``` or ``` ... ``` wrappers
     fence_match = re.search(r"```(?:json)?\s*([\s\S]*?)```", stripped)
     if fence_match:
         stripped = fence_match.group(1).strip()
 
     start = stripped.find("{")
     end = stripped.rfind("}")
+
     if start == -1 or end == -1 or end < start:
         raise ResponseParseError(
             f"Could not locate a JSON object in the LLM response. "
             f"Raw response (first 500 chars): {raw[:500]!r}"
         )
+
     return stripped[start : end + 1]
 
 
@@ -142,7 +149,7 @@ def _parse_response(raw_content: str) -> dict[str, Any]:
     Raises
     ------
     ResponseParseError
-        If the content cannot be decoded as JSON.
+        If the content cannot be decoded as JSON or is not a dict.
     """
     json_str = _extract_json(raw_content)
     try:
@@ -152,6 +159,7 @@ def _parse_response(raw_content: str) -> dict[str, Any]:
             f"LLM returned invalid JSON: {exc}. "
             f"Extracted string (first 500 chars): {json_str[:500]!r}"
         ) from exc
+
     if not isinstance(data, dict):
         raise ResponseParseError(
             f"Expected a JSON object at the top level, got {type(data).__name__}."
@@ -181,7 +189,7 @@ def _validate_report(data: dict[str, Any]) -> ViabilityReport:
         return ViabilityReport.model_validate(data)
     except ValidationError as exc:
         error_summary = "; ".join(
-            f"{'.'.join(str(loc) for loc in e['loc'])}: {e['msg']}"
+            f"{'.' .join(str(loc) for loc in e['loc'])}: {e['msg']}"
             for e in exc.errors()
         )
         raise ReportValidationError(
@@ -202,6 +210,7 @@ def analyze_idea(
     model: str | None = None,
     max_tokens: int | None = None,
     temperature: float = 0.7,
+    timeout: float = 60.0,
 ) -> ViabilityReport:
     """Analyse a side-hustle app idea and return a structured viability report.
 
@@ -221,14 +230,16 @@ def analyze_idea(
         provided, one is built from environment variables.  Useful for
         injecting mocks in tests.
     model:
-        OpenAI model name to use.  Defaults to the ``OPENAI_MODEL`` environment
-        variable, falling back to ``"gpt-4o"``.
+        OpenAI model name to use.  Defaults to the ``OPENAI_MODEL``
+        environment variable, falling back to ``"gpt-4o"``.
     max_tokens:
         Maximum tokens for the completion.  Defaults to the
         ``OPENAI_MAX_TOKENS`` environment variable, falling back to ``2048``.
     temperature:
-        Sampling temperature (0.0 – 2.0).  Defaults to ``0.7`` for a balance
-        between creativity and reliability.
+        Sampling temperature (0.0 – 2.0).  Defaults to ``0.7`` for a
+        balance between creativity and reliability.
+    timeout:
+        Request timeout in seconds.  Defaults to ``60.0``.
 
     Returns
     -------
@@ -238,27 +249,20 @@ def analyze_idea(
     Raises
     ------
     OpenAIClientError
-        If the OpenAI API call fails due to auth, connection, or API errors.
+        If the OpenAI API call fails due to auth, connection, timeout,
+        or API-level errors.
     ResponseParseError
         If the LLM response cannot be decoded as valid JSON.
     ReportValidationError
-        If the decoded JSON does not satisfy the :class:`ViabilityReport` schema.
-
-    Examples
-    --------
-    >>> from unittest.mock import MagicMock, patch
-    >>> # (In real usage, no patching required — just call analyze_idea(request))
+        If the decoded JSON does not satisfy the :class:`ViabilityReport`
+        schema.
     """
     if client is None:
         client = _get_openai_client()
 
-    resolved_model: str = (
-        model
-        or os.getenv("OPENAI_MODEL", "gpt-4o")
-    )
-    resolved_max_tokens: int = (
-        max_tokens
-        or int(os.getenv("OPENAI_MAX_TOKENS", "2048"))
+    resolved_model: str = model or os.getenv("OPENAI_MODEL", "gpt-4o")
+    resolved_max_tokens: int = max_tokens or int(
+        os.getenv("OPENAI_MAX_TOKENS", "2048")
     )
 
     messages = build_messages(request.idea)
@@ -270,6 +274,8 @@ def analyze_idea(
         len(request.idea),
     )
 
+    t_start = time.monotonic()
+
     try:
         response = client.chat.completions.create(
             model=resolved_model,
@@ -277,34 +283,54 @@ def analyze_idea(
             max_tokens=resolved_max_tokens,
             temperature=temperature,
             response_format={"type": "json_object"},
+            timeout=timeout,
         )
     except AuthenticationError as exc:
         raise OpenAIClientError(
             "OpenAI authentication failed — check your OPENAI_API_KEY."
+        ) from exc
+    except APITimeoutError as exc:
+        raise OpenAIClientError(
+            f"OpenAI API request timed out after {timeout:.0f}s. "
+            "Try again or increase the timeout."
         ) from exc
     except APIConnectionError as exc:
         raise OpenAIClientError(
             f"Could not connect to the OpenAI API: {exc}"
         ) from exc
     except APIStatusError as exc:
+        # Map common status codes to actionable messages.
+        status_code = exc.status_code
+        if status_code == 401:
+            detail = "authentication failed — check your OPENAI_API_KEY"
+        elif status_code == 429:
+            detail = "rate limit exceeded — please wait and try again"
+        elif status_code == 503:
+            detail = "service temporarily unavailable — check status.openai.com"
+        else:
+            detail = exc.message or str(exc)
         raise OpenAIClientError(
-            f"OpenAI API returned an error (status {exc.status_code}): {exc.message}"
+            f"OpenAI API returned an error (status {status_code}): {detail}"
         ) from exc
+
+    elapsed = time.monotonic() - t_start
 
     choice = response.choices[0]
     finish_reason = choice.finish_reason
     raw_content: str = choice.message.content or ""
 
     logger.debug(
-        "OpenAI response received finish_reason=%s content_length=%d",
+        "OpenAI response received finish_reason=%s content_length=%d elapsed=%.2fs",
         finish_reason,
         len(raw_content),
+        elapsed,
     )
 
     if finish_reason == "length":
         logger.warning(
-            "OpenAI response was truncated (finish_reason='length'). "
-            "Consider increasing OPENAI_MAX_TOKENS."
+            "OpenAI response was truncated (finish_reason='length') after %.2fs. "
+            "Consider increasing OPENAI_MAX_TOKENS.",
+            elapsed,
         )
 
     if not raw_content.strip():
@@ -317,9 +343,10 @@ def analyze_idea(
     report = _validate_report(data)
 
     logger.info(
-        "Viability report generated successfully score=%s competitors=%d",
+        "Viability report generated successfully score=%s competitors=%d elapsed=%.2fs",
         report.viability_score.value,
         len(report.competitors),
+        elapsed,
     )
 
     return report

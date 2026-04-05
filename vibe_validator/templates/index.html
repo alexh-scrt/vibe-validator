@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="description" content="Vibe Validator — AI-powered viability reports for your side-hustle app idea. Get instant market analysis, competitor insights, monetisation models, and a ready-to-paste starter prompt." />
+  <meta name="theme-color" content="#0f172a" />
   <title>Vibe Validator — Validate Your App Idea in Seconds</title>
 
   <!-- TailwindCSS CDN -->
@@ -36,11 +37,16 @@
           },
           animation: {
             'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-            'fade-in': 'fadeIn 0.4s ease-out forwards',
+            'fade-in': 'fadeIn 0.5s ease-out forwards',
+            'slide-up': 'slideUp 0.4s ease-out forwards',
           },
           keyframes: {
             fadeIn: {
-              '0%':   { opacity: '0', transform: 'translateY(12px)' },
+              '0%':   { opacity: '0', transform: 'translateY(16px)' },
+              '100%': { opacity: '1', transform: 'translateY(0)' },
+            },
+            slideUp: {
+              '0%':   { opacity: '0', transform: 'translateY(24px)' },
               '100%': { opacity: '1', transform: 'translateY(0)' },
             }
           }
@@ -55,14 +61,39 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
 
   <style>
-    /* Gradient background pattern */
+    /* -----------------------------------------------------------------------
+     * Base & layout
+     * --------------------------------------------------------------------- */
+    *, *::before, *::after { box-sizing: border-box; }
+
+    /* Layered radial-gradient hero background */
     .hero-bg {
       background-color: #0f172a;
       background-image:
-        radial-gradient(ellipse at 20% 50%, rgba(34, 197, 94, 0.08) 0%, transparent 60%),
-        radial-gradient(ellipse at 80% 10%, rgba(59, 130, 246, 0.06) 0%, transparent 50%);
+        radial-gradient(ellipse at 20% 50%, rgba(34, 197, 94, 0.07) 0%, transparent 60%),
+        radial-gradient(ellipse at 80% 10%, rgba(59, 130, 246, 0.05) 0%, transparent 50%),
+        radial-gradient(ellipse at 60% 90%, rgba(168, 85, 247, 0.04) 0%, transparent 50%);
     }
 
+    /* Subtle grid overlay for depth */
+    .hero-bg::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(255,255,255,0.012) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.012) 1px, transparent 1px);
+      background-size: 48px 48px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* Ensure content sits above the grid overlay */
+    body > * { position: relative; z-index: 1; }
+
+    /* -----------------------------------------------------------------------
+     * Form & interaction
+     * --------------------------------------------------------------------- */
     /* Smooth transition for the result area */
     #result-area {
       transition: min-height 0.3s ease;
@@ -70,175 +101,351 @@
 
     /* Loading spinner */
     .spinner {
-      width: 20px;
-      height: 20px;
-      border: 2px solid rgba(255, 255, 255, 0.3);
+      width: 18px;
+      height: 18px;
+      border: 2px solid rgba(255, 255, 255, 0.25);
       border-top-color: #ffffff;
       border-radius: 50%;
-      animation: spin 0.8s linear infinite;
+      animation: spin 0.75s linear infinite;
       display: inline-block;
+      flex-shrink: 0;
     }
 
     @keyframes spin {
       to { transform: rotate(360deg); }
     }
 
-    /* HTMX request indicator */
-    .htmx-request .btn-label { display: none; }
-    .htmx-request .btn-loading { display: flex; }
+    /* HTMX request indicator — toggle label/spinner visibility */
+    .htmx-request .btn-label   { display: none !important; }
+    .htmx-request .btn-loading { display: flex !important; }
     .btn-loading { display: none; align-items: center; gap: 8px; }
+
+    /* Textarea focus glow */
+    textarea:focus {
+      box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.2);
+    }
 
     /* Character counter colour states */
     .char-ok    { color: #6b7280; }
     .char-warn  { color: #f59e0b; }
     .char-error { color: #ef4444; }
+
+    /* -----------------------------------------------------------------------
+     * Feature pill cards
+     * --------------------------------------------------------------------- */
+    .feature-card {
+      transition: transform 0.2s ease, border-color 0.2s ease;
+    }
+    .feature-card:hover {
+      transform: translateY(-2px);
+      border-color: rgba(34, 197, 94, 0.3);
+    }
+
+    /* -----------------------------------------------------------------------
+     * Accessibility — visible focus ring for keyboard users
+     * --------------------------------------------------------------------- */
+    :focus-visible {
+      outline: 2px solid #22c55e;
+      outline-offset: 2px;
+    }
   </style>
 </head>
 
 <body class="hero-bg min-h-screen font-sans text-slate-100 antialiased">
 
-  <!-- ===== NAV ===== -->
-  <nav class="border-b border-slate-800 bg-slate-900/60 backdrop-blur-sm sticky top-0 z-50">
-    <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between">
-      <a href="/" class="flex items-center gap-2 font-bold text-lg tracking-tight text-white">
-        <span class="text-brand-400">&#9889;</span> Vibe Validator
+  <!-- ===== SKIP TO CONTENT (accessibility) ===== -->
+  <a
+    href="#main-content"
+    class="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-[100] focus:px-4 focus:py-2 focus:rounded-lg focus:bg-brand-600 focus:text-white focus:font-semibold"
+  >
+    Skip to main content
+  </a>
+
+  <!-- ===== NAVIGATION ===== -->
+  <nav
+    class="border-b border-slate-800/80 bg-slate-900/70 backdrop-blur-md sticky top-0 z-50"
+    role="navigation"
+    aria-label="Main navigation"
+  >
+    <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between gap-4">
+      <!-- Logo / brand -->
+      <a
+        href="/"
+        class="flex items-center gap-2 font-bold text-lg tracking-tight text-white hover:text-brand-300 transition-colors"
+        aria-label="Vibe Validator — home"
+      >
+        <span class="text-brand-400" aria-hidden="true">&#9889;</span>
+        <span>Vibe Validator</span>
       </a>
-      <span class="hidden sm:inline-block text-xs font-medium px-2.5 py-1 rounded-full bg-brand-900/60 text-brand-400 border border-brand-800">
-        Powered by GPT-4o
-      </span>
+
+      <!-- Right-side badge -->
+      <div class="flex items-center gap-3">
+        <span class="hidden sm:inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full bg-brand-900/50 text-brand-400 border border-brand-800/60">
+          <span class="inline-block w-1.5 h-1.5 rounded-full bg-brand-400 animate-pulse-slow" aria-hidden="true"></span>
+          GPT-4o Powered
+        </span>
+      </div>
     </div>
   </nav>
 
-  <!-- ===== HERO ===== -->
-  <section class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 pt-16 pb-10 text-center">
-    <div class="inline-flex items-center gap-2 mb-6 text-xs font-semibold tracking-widest uppercase text-brand-400 bg-brand-900/40 border border-brand-800 rounded-full px-4 py-1.5">
-      <span class="inline-block w-2 h-2 rounded-full bg-brand-400 animate-pulse-slow"></span>
-      AI Viability Analysis
-    </div>
+  <!-- ===== MAIN CONTENT ===== -->
+  <main id="main-content">
 
-    <h1 class="text-4xl sm:text-5xl font-extrabold leading-tight tracking-tight text-white mb-4">
-      Turn your fuzzy idea into
-      <span class="text-brand-400">actionable intelligence</span>
-    </h1>
+    <!-- ===== HERO SECTION ===== -->
+    <section class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 pt-16 pb-10 text-center" aria-labelledby="hero-heading">
 
-    <p class="text-slate-400 text-lg sm:text-xl leading-relaxed max-w-2xl mx-auto mb-2">
-      Paste your side-hustle app idea below. Get an instant structured report:
-      market size, competitors, monetisation models, and a
-      ready-to-paste prompt for Lovable, Claude, or Base44.
-    </p>
-
-    <p class="text-slate-600 text-sm">No signup required &mdash; results in under 10 seconds.</p>
-  </section>
-
-  <!-- ===== FORM SECTION ===== -->
-  <section class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 pb-10">
-    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 sm:p-8 shadow-2xl shadow-black/40">
-
-      <form
-        id="idea-form"
-        hx-post="/validate"
-        hx-target="#result-area"
-        hx-swap="innerHTML"
-        hx-indicator="#submit-btn"
-        novalidate
+      <!-- Eyebrow badge -->
+      <div
+        class="inline-flex items-center gap-2 mb-6 text-xs font-bold tracking-widest uppercase text-brand-400 bg-brand-900/30 border border-brand-800/60 rounded-full px-4 py-1.5"
+        role="presentation"
       >
-        <!-- Textarea label -->
-        <label for="idea" class="block text-sm font-semibold text-slate-300 mb-2">
-          Describe your app idea
-          <span class="text-brand-500">*</span>
-        </label>
+        <span class="inline-block w-2 h-2 rounded-full bg-brand-400 animate-pulse-slow" aria-hidden="true"></span>
+        AI Viability Analysis &mdash; No Signup Required
+      </div>
 
-        <!-- Textarea -->
-        <textarea
-          id="idea"
-          name="idea"
-          rows="6"
-          minlength="20"
-          maxlength="2000"
-          required
-          placeholder="e.g. &#39;A mobile app that lets dog owners book on-demand vet video consultations within minutes. Targets busy urban pet owners who can&#39;t easily visit a clinic.&#39;"
-          class="w-full rounded-xl bg-slate-800 border border-slate-700 text-slate-100 placeholder-slate-500 text-sm leading-relaxed p-4 resize-none focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition"
-          oninput="updateCharCount(this)"
-          onkeydown="handleTextareaKeydown(event)"
-        ></textarea>
+      <!-- Headline -->
+      <h1
+        id="hero-heading"
+        class="text-4xl sm:text-5xl lg:text-6xl font-extrabold leading-[1.1] tracking-tight text-white mb-5"
+      >
+        Turn your fuzzy idea into
+        <span class="text-brand-400 block sm:inline">actionable intelligence</span>
+      </h1>
 
-        <!-- Character counter + hint -->
-        <div class="mt-2 flex items-center justify-between gap-4">
-          <p class="text-xs text-slate-500">Be specific for a better analysis. Minimum 20 characters.</p>
-          <p id="char-count" class="text-xs font-mono char-ok whitespace-nowrap">0 / 2000</p>
-        </div>
+      <!-- Sub-headline -->
+      <p class="text-slate-400 text-lg sm:text-xl leading-relaxed max-w-2xl mx-auto mb-3">
+        Paste your side-hustle app idea below and get an instant structured report:
+        market size, similar products, monetisation models, and a
+        ready-to-paste prompt for <strong class="text-slate-300 font-semibold">Lovable</strong>,
+        <strong class="text-slate-300 font-semibold">Claude</strong>, or
+        <strong class="text-slate-300 font-semibold">Base44</strong>.
+      </p>
 
-        <!-- Submit button -->
-        <div class="mt-6">
-          <button
-            id="submit-btn"
-            type="submit"
-            class="w-full sm:w-auto inline-flex items-center justify-center gap-3 px-8 py-3.5 rounded-xl font-semibold text-sm bg-brand-500 hover:bg-brand-400 text-white shadow-lg shadow-brand-900/40 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-900 focus:ring-brand-500 disabled:opacity-60 disabled:cursor-not-allowed"
+      <!-- Secondary note -->
+      <p class="text-slate-600 text-sm font-medium">
+        Results in under 10 seconds &mdash; no account, no data stored.
+      </p>
+    </section>
+
+    <!-- ===== FORM SECTION ===== -->
+    <section
+      class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 pb-8"
+      aria-labelledby="form-heading"
+    >
+      <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-6 sm:p-8 shadow-2xl shadow-black/50 backdrop-blur-sm">
+
+        <h2 id="form-heading" class="sr-only">Submit your idea for analysis</h2>
+
+        <form
+          id="idea-form"
+          hx-post="/validate"
+          hx-target="#result-area"
+          hx-swap="innerHTML"
+          hx-indicator="#submit-btn"
+          novalidate
+          aria-label="Idea submission form"
+        >
+          <!-- ── Textarea label ── -->
+          <label
+            for="idea"
+            class="block text-sm font-semibold text-slate-200 mb-2"
           >
-            <span class="btn-label flex items-center gap-2">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                <path fill-rule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clip-rule="evenodd" />
-              </svg>
-              Validate My Idea
-            </span>
-            <span class="btn-loading">
-              <span class="spinner" aria-hidden="true"></span>
-              Analysing&hellip;
-            </span>
-          </button>
+            Describe your app idea
+            <span class="text-brand-500" aria-hidden="true">*</span>
+            <span class="sr-only">(required, 20 to 2000 characters)</span>
+          </label>
+
+          <!-- ── Example hint ── -->
+          <p class="text-xs text-slate-500 mb-3 leading-relaxed">
+            Be as specific as possible &mdash; include the target audience, core problem,
+            and any key differentiators you have in mind.
+          </p>
+
+          <!-- ── Textarea ── -->
+          <div class="relative">
+            <textarea
+              id="idea"
+              name="idea"
+              rows="7"
+              minlength="20"
+              maxlength="2000"
+              required
+              aria-required="true"
+              aria-describedby="idea-hint char-count"
+              placeholder="e.g. 'A mobile app that lets dog owners book on-demand vet video consultations within minutes. Targets busy urban pet owners who can't easily visit a clinic. Differentiator: vets are pre-vetted and available 24/7.'"
+              class="w-full rounded-xl bg-slate-800 border border-slate-700 text-slate-100 placeholder-slate-500/70 text-sm leading-relaxed p-4 resize-y min-h-[140px] focus:outline-none focus:ring-2 focus:ring-brand-500/60 focus:border-brand-600 transition-colors duration-150"
+              oninput="updateCharCount(this)"
+              onkeydown="handleTextareaKeydown(event)"
+            ></textarea>
+          </div>
+
+          <!-- ── Character counter + shortcut hint ── -->
+          <div class="mt-2 flex items-center justify-between gap-4" id="idea-hint">
+            <p class="text-xs text-slate-600">
+              <kbd class="font-mono text-slate-500 bg-slate-800 border border-slate-700 px-1.5 py-0.5 rounded text-[10px]">Ctrl</kbd>
+              +
+              <kbd class="font-mono text-slate-500 bg-slate-800 border border-slate-700 px-1.5 py-0.5 rounded text-[10px]">Enter</kbd>
+              to submit
+            </p>
+            <p
+              id="char-count"
+              class="text-xs font-mono char-ok whitespace-nowrap tabular-nums"
+              aria-live="polite"
+              aria-label="Character count"
+            >
+              0 / 2000
+            </p>
+          </div>
+
+          <!-- ── Submit button ── -->
+          <div class="mt-5 flex flex-col sm:flex-row items-start sm:items-center gap-3">
+            <button
+              id="submit-btn"
+              type="submit"
+              class="inline-flex items-center justify-center gap-3 px-8 py-3.5 rounded-xl font-bold text-sm bg-brand-500 hover:bg-brand-400 active:bg-brand-600 text-white shadow-lg shadow-brand-900/50 transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-900 focus:ring-brand-500 disabled:opacity-50 disabled:cursor-not-allowed select-none"
+              aria-label="Validate my idea"
+            >
+              <span class="btn-label flex items-center gap-2">
+                <!-- Lightning bolt icon -->
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                  <path fill-rule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clip-rule="evenodd" />
+                </svg>
+                Validate My Idea
+              </span>
+              <span class="btn-loading" aria-live="polite">
+                <span class="spinner" aria-hidden="true"></span>
+                <span>Analysing&hellip;</span>
+              </span>
+            </button>
+
+            <p class="text-xs text-slate-600 leading-snug">
+              Typically takes 5&ndash;15 seconds depending on idea complexity.
+            </p>
+          </div>
+        </form>
+      </div>
+    </section>
+
+    <!-- ===== RESULT AREA ===== -->
+    <section
+      class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 pb-20"
+      id="result-area"
+      aria-live="polite"
+      aria-atomic="true"
+      aria-label="Analysis results"
+    >
+      <!-- Partial templates (report.html / error.html) are injected here by HTMX -->
+    </section>
+
+    <!-- ===== WHAT YOU GET ===== -->
+    <section
+      class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 pb-16"
+      aria-labelledby="features-heading"
+    >
+      <p
+        id="features-heading"
+        class="text-center text-xs text-slate-600 uppercase tracking-widest mb-6 font-bold"
+      >
+        What you get in your report
+      </p>
+
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+
+        <div class="feature-card flex flex-col items-center gap-2.5 rounded-xl bg-slate-900/70 border border-slate-800 p-5 text-center">
+          <span class="text-2xl" role="img" aria-label="Market size chart">&#128200;</span>
+          <div>
+            <p class="text-xs text-slate-300 font-semibold leading-snug">Market Size</p>
+            <p class="text-xs text-slate-500 leading-snug mt-0.5">TAM, SAM &amp; growth</p>
+          </div>
         </div>
-      </form>
-    </div>
-  </section>
 
-  <!-- ===== RESULT AREA ===== -->
-  <section class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 pb-20" id="result-area" aria-live="polite" aria-atomic="true">
-    <!-- Partial templates (report.html / error.html) are injected here by HTMX -->
-  </section>
+        <div class="feature-card flex flex-col items-center gap-2.5 rounded-xl bg-slate-900/70 border border-slate-800 p-5 text-center">
+          <span class="text-2xl" role="img" aria-label="Magnifying glass">&#128269;</span>
+          <div>
+            <p class="text-xs text-slate-300 font-semibold leading-snug">Competitors</p>
+            <p class="text-xs text-slate-500 leading-snug mt-0.5">Similar products &amp; your edge</p>
+          </div>
+        </div>
 
-  <!-- ===== FEATURE PILLS ===== -->
-  <section class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 pb-16">
-    <p class="text-center text-xs text-slate-600 uppercase tracking-widest mb-6 font-semibold">What you get</p>
-    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
-      <div class="flex flex-col items-center gap-2 rounded-xl bg-slate-900/60 border border-slate-800 p-4 text-center">
-        <span class="text-2xl" role="img" aria-label="Market">&#128200;</span>
-        <span class="text-xs text-slate-400 font-medium leading-snug">Market Size Estimate</span>
+        <div class="feature-card flex flex-col items-center gap-2.5 rounded-xl bg-slate-900/70 border border-slate-800 p-5 text-center">
+          <span class="text-2xl" role="img" aria-label="Money bag">&#128176;</span>
+          <div>
+            <p class="text-xs text-slate-300 font-semibold leading-snug">Monetisation</p>
+            <p class="text-xs text-slate-500 leading-snug mt-0.5">Revenue models &amp; ARPU</p>
+          </div>
+        </div>
+
+        <div class="feature-card flex flex-col items-center gap-2.5 rounded-xl bg-slate-900/70 border border-slate-800 p-5 text-center">
+          <span class="text-2xl" role="img" aria-label="Rocket">&#128640;</span>
+          <div>
+            <p class="text-xs text-slate-300 font-semibold leading-snug">Starter Prompt</p>
+            <p class="text-xs text-slate-500 leading-snug mt-0.5">Paste into any AI builder</p>
+          </div>
+        </div>
+
       </div>
-      <div class="flex flex-col items-center gap-2 rounded-xl bg-slate-900/60 border border-slate-800 p-4 text-center">
-        <span class="text-2xl" role="img" aria-label="Competitors">&#128269;</span>
-        <span class="text-xs text-slate-400 font-medium leading-snug">Similar Products</span>
+    </section>
+
+    <!-- ===== SOCIAL PROOF / TRUST STRIP ===== -->
+    <section class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 pb-16 text-center">
+      <div class="flex flex-wrap items-center justify-center gap-4 sm:gap-8">
+        <div class="flex items-center gap-2 text-xs text-slate-600 font-medium">
+          <svg class="h-4 w-4 text-brand-700" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
+            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+          </svg>
+          No account needed
+        </div>
+        <div class="flex items-center gap-2 text-xs text-slate-600 font-medium">
+          <svg class="h-4 w-4 text-brand-700" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
+            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+          </svg>
+          Zero data stored
+        </div>
+        <div class="flex items-center gap-2 text-xs text-slate-600 font-medium">
+          <svg class="h-4 w-4 text-brand-700" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
+            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+          </svg>
+          Results in under 15s
+        </div>
+        <div class="flex items-center gap-2 text-xs text-slate-600 font-medium">
+          <svg class="h-4 w-4 text-brand-700" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
+            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+          </svg>
+          GPT-4o powered
+        </div>
       </div>
-      <div class="flex flex-col items-center gap-2 rounded-xl bg-slate-900/60 border border-slate-800 p-4 text-center">
-        <span class="text-2xl" role="img" aria-label="Monetisation">&#128176;</span>
-        <span class="text-xs text-slate-400 font-medium leading-snug">Monetisation Models</span>
-      </div>
-      <div class="flex flex-col items-center gap-2 rounded-xl bg-slate-900/60 border border-slate-800 p-4 text-center">
-        <span class="text-2xl" role="img" aria-label="Starter prompt">&#128640;</span>
-        <span class="text-xs text-slate-400 font-medium leading-snug">Starter Prompt</span>
-      </div>
-    </div>
-  </section>
+    </section>
+
+  </main>
 
   <!-- ===== FOOTER ===== -->
-  <footer class="border-t border-slate-800 py-6 text-center text-xs text-slate-600">
-    <p>Built for the wave of non-technical founders shipping with AI &mdash; no data stored.</p>
-    <p class="mt-1">&#9889; Vibe Validator &copy; 2024</p>
+  <footer class="border-t border-slate-800/60 py-8" role="contentinfo">
+    <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-600">
+      <p>
+        <span aria-hidden="true">&#9889;</span>
+        <strong class="text-slate-500 font-semibold">Vibe Validator</strong>
+        &mdash; Built for non-technical founders shipping with AI.
+      </p>
+      <p>&copy; 2024 &mdash; No data stored, ever.</p>
+    </div>
   </footer>
 
-  <!-- ===== JS HELPERS ===== -->
+  <!-- ===== JAVASCRIPT ===== -->
   <script>
+    'use strict';
+
     /**
      * Update the character counter beneath the textarea and apply colour
      * coding based on remaining length.
      * @param {HTMLTextAreaElement} textarea
      */
     function updateCharCount(textarea) {
-      const max = parseInt(textarea.getAttribute('maxlength') || '2000', 10);
-      const len = textarea.value.length;
-      const counter = document.getElementById('char-count');
+      var max = parseInt(textarea.getAttribute('maxlength') || '2000', 10);
+      var len = textarea.value.length;
+      var counter = document.getElementById('char-count');
       if (!counter) return;
 
-      counter.textContent = `${len} / ${max}`;
+      counter.textContent = len + ' / ' + max;
 
       counter.classList.remove('char-ok', 'char-warn', 'char-error');
       if (len > max * 0.9) {
@@ -257,7 +464,7 @@
     function handleTextareaKeydown(event) {
       if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
         event.preventDefault();
-        const form = document.getElementById('idea-form');
+        var form = document.getElementById('idea-form');
         if (form) form.requestSubmit();
       }
     }
@@ -267,10 +474,12 @@
      * smoothly so the user sees it without manual scrolling.
      */
     document.body.addEventListener('htmx:afterSwap', function (evt) {
-      if (evt.detail.target && evt.detail.target.id === 'result-area') {
+      var target = evt.detail && evt.detail.target;
+      if (target && target.id === 'result-area') {
+        // Small delay ensures the DOM has painted before we scroll.
         setTimeout(function () {
-          evt.detail.target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }, 80);
+          target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 100);
       }
     });
 
@@ -279,17 +488,52 @@
      * error) so the user can refine and resubmit.
      */
     document.body.addEventListener('htmx:afterRequest', function () {
-      const btn = document.getElementById('submit-btn');
+      var btn = document.getElementById('submit-btn');
       if (btn) btn.disabled = false;
     });
 
     /**
-     * Disable submit button while request is in-flight to prevent double-submit.
+     * Disable submit button while request is in-flight to prevent
+     * accidental double-submission.
      */
     document.body.addEventListener('htmx:beforeRequest', function () {
-      const btn = document.getElementById('submit-btn');
+      var btn = document.getElementById('submit-btn');
       if (btn) btn.disabled = true;
     });
+
+    /**
+     * Surface HTMX network-level errors (e.g. server completely down)
+     * as a friendly inline message rather than a silent failure.
+     */
+    document.body.addEventListener('htmx:responseError', function (evt) {
+      var resultArea = document.getElementById('result-area');
+      if (!resultArea) return;
+      var status = (evt.detail && evt.detail.xhr && evt.detail.xhr.status) || 0;
+      resultArea.innerHTML = [
+        '<div class="animate-fade-in rounded-2xl border border-red-800 bg-red-950/40 p-6" role="alert" aria-live="assertive">',
+        '  <p class="text-base font-bold text-red-300 mb-2">Connection error</p>',
+        '  <p class="text-sm text-red-200">',
+        '    Could not reach the server' + (status ? ' (HTTP ' + status + ')' : '') + '.',
+        '    Please check your connection and try again.',
+        '  </p>',
+        '  <button type="button" onclick="dismissNetworkError()" class="mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold bg-red-900/50 border border-red-800 text-red-300 hover:text-white hover:bg-red-900/80 transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-red-500">',
+        '    Try Again',
+        '  </button>',
+        '</div>',
+      ].join('');
+    });
+
+    /**
+     * Clear the network-error message and refocus the textarea.
+     */
+    function dismissNetworkError() {
+      var resultArea = document.getElementById('result-area');
+      if (resultArea) resultArea.innerHTML = '';
+      var textarea = document.getElementById('idea');
+      if (textarea) textarea.focus();
+      var btn = document.getElementById('submit-btn');
+      if (btn) btn.disabled = false;
+    }
   </script>
 
 </body>
